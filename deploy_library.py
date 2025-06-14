@@ -134,12 +134,32 @@ def run_demonstration(venv_path, library_name):
     )
     try:
         demo_script.write_text(demo_code, encoding="utf-8")
-        result = subprocess.run([str(python_path), str(demo_script)], capture_output=True, text=True)
-        logging.info(f"Демонстрация вывода: {result.stdout.strip()}")
-        if result.stderr:
-            logging.warning(f"Сообщения ошибки демонстрации: {result.stderr.strip()}")
+
+        orig_pyio = os.environ.get("PYTHONIOENCODING")
+        os.environ["PYTHONIOENCODING"] = "utf-8"
+        try:
+            result = subprocess.run(
+                [str(python_path), str(demo_script)],
+                capture_output=True,
+            )
+        finally:
+            if orig_pyio is None:
+                os.environ.pop("PYTHONIOENCODING", None)
+            else:
+                os.environ["PYTHONIOENCODING"] = orig_pyio
+
+        stdout = result.stdout
+        stderr = result.stderr
+        if isinstance(stdout, bytes):
+            stdout = stdout.decode("utf-8", errors="replace")
+        if isinstance(stderr, bytes):
+            stderr = stderr.decode("utf-8", errors="replace")
+
+        logging.info(f"Демонстрация вывода: {stdout.strip()}")
+        if stderr:
+            logging.warning(f"Сообщения ошибки демонстрации: {stderr.strip()}")
     except Exception as exc:
-        logging.error(f"Ошибка выполнения демонстрации: {exc}")
+        logging.error(f"Ошика выполнения демонстрации: {exc}")
     finally:
         if demo_script.exists():
             demo_script.unlink()
