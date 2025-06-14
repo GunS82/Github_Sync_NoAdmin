@@ -34,6 +34,17 @@ class DeployLibraryTests(TestCase):
                 self.assertIsNotNone(zip_path)
                 self.assertEqual(zip_path.read_bytes(), dummy_data)
 
+    def test_download_repo_zip_branch_override(self):
+        dummy_data = b'TESTDATA'
+        with tempfile.TemporaryDirectory() as tmpdir:
+            temp_path = Path(tmpdir)
+            with mock.patch.dict(os.environ, {dl.BRANCH_ENV_VAR: 'feature'}):
+                with mock.patch('requests.get', return_value=DummyResponse(dummy_data)) as mock_get:
+                    zip_path = dl.download_repo_zip('https://example.com/repo', temp_path)
+                    self.assertIsNotNone(zip_path)
+                    expected_url = 'https://example.com/repo/archive/refs/heads/feature.zip'
+                    mock_get.assert_called_with(expected_url, stream=True, timeout=30)
+
     def test_extract_repo_zip(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp_path = Path(tmpdir)

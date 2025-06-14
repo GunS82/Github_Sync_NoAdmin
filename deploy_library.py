@@ -12,6 +12,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 REPO_URL_ENV_VAR = "PYTHON_LIB_GITHUB_URL"
 DEFAULT_BRANCH = "main"
+BRANCH_ENV_VAR = "PYTHON_LIB_BRANCH"
 
 def get_repo_url_from_env():
     """Return repository URL from environment variable."""
@@ -27,8 +28,9 @@ def download_repo_zip(repo_url, temp_dir_path):
         if repo_url.endswith(".zip"):
             zip_url = repo_url
         else:
+            branch = os.environ.get(BRANCH_ENV_VAR, DEFAULT_BRANCH)
             cleaned = repo_url.rstrip("/")
-            zip_url = f"{cleaned}/archive/refs/heads/{DEFAULT_BRANCH}.zip"
+            zip_url = f"{cleaned}/archive/refs/heads/{branch}.zip"
         response = requests.get(zip_url, stream=True, timeout=30)
         response.raise_for_status()
         zip_file_path = Path(temp_dir_path) / "repo.zip"
