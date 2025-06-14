@@ -30,6 +30,12 @@ class DeployLibraryTests(TestCase):
         with mock.patch.dict(os.environ, {dl.REPO_URL_ENV_VAR: 'https://example.com'}):
             self.assertEqual(dl.get_repo_url_from_env(), 'https://example.com')
 
+    def test_get_repo_name_from_url(self):
+        url_zip = 'https://github.com/user/repo/archive/refs/heads/main.zip'
+        url_repo = 'https://github.com/user/repo'
+        self.assertEqual(dl.get_repo_name_from_url(url_zip), 'repo')
+        self.assertEqual(dl.get_repo_name_from_url(url_repo), 'repo')
+
     def test_download_repo_zip(self):
         dummy_data = b'TESTDATA'
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -57,6 +63,14 @@ class DeployLibraryTests(TestCase):
             root_dir.mkdir()
             (root_dir / '__init__.py').write_text('')
             self.assertEqual(dl.find_library_root(tmp_path), root_dir)
+
+    def test_guess_package_name(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_path = Path(tmpdir)
+            package_dir = tmp_path / 'mypkg'
+            package_dir.mkdir()
+            (package_dir / '__init__.py').write_text('')
+            self.assertEqual(dl.guess_package_name(tmp_path), 'mypkg')
 
     def test_create_virtual_env(self):
         with mock.patch('subprocess.run') as mock_run:
