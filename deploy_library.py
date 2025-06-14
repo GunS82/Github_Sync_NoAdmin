@@ -7,11 +7,27 @@ import tempfile
 import shutil
 import logging
 from pathlib import Path
+from urllib.parse import urlparse
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 REPO_URL_ENV_VAR = "PYTHON_LIB_GITHUB_URL"
 DEFAULT_BRANCH = "main"
+
+def get_repo_name_from_url(repo_url: str) -> str | None:
+    """Extract repository name from GitHub URL or zip link."""
+    try:
+        path_parts = [p for p in urlparse(repo_url).path.split("/") if p]
+        if not path_parts:
+            return None
+        if "archive" in path_parts:
+            idx = path_parts.index("archive") - 1
+            if idx >= 0:
+                return path_parts[idx]
+        return path_parts[-1].removesuffix(".zip")
+    except Exception as exc:
+        logging.error(f"Не удалось определить имя репозитория: {exc}")
+        return None
 
 def get_repo_url_from_env():
     """Return repository URL from environment variable."""
@@ -65,6 +81,16 @@ def find_library_root(extract_to_dir_path):
     except Exception as exc:
         logging.error(f"Ошибка при поиске корневой папки: {exc}")
         return None
+
+def guess_package_name(library_root: Path) -> str | None:
+    """Attempt to determine Python package name from library root."""
+    try:
+        candidates = [p for p in library_root.iterdir() if (p / "__init__.py").is_file()]
+        if candidates:
+            return candidates[0].name
+    except Exception as exc:
+        logging.error(f"Ошибка определения имени пакета: {exc}")
+    return library_root.name
 
 def create_virtual_env(venv_path):
     """Create virtual environment."""
@@ -153,7 +179,10 @@ def main():
         library_root_path = find_library_root(extracted_content_path)
         if not library_root_path:
             return
-        library_name_for_import = Path(repo_url_str.strip("/")).name
+        library_name_for_import = guess_package_name(library_root_path)
+        if not library_name_for_import:
+            logging.error("Не удалось определить имя пакета для импорта.")
+            return
         if not create_virtual_env(venv_dir_path):
             return
         if not install_library_in_venv(venv_dir_path, library_root_path):
