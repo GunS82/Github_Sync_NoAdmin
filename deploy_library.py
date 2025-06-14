@@ -128,6 +128,9 @@ def run_demonstration(venv_path, library_name):
     python_path = Path(venv_path) / python_dir / python_exe
     demo_script = Path(venv_path) / "demo_script.py"
     demo_code = (
+        "import sys\n"
+        "if hasattr(sys.stdout, 'reconfigure'):\n"
+        "    sys.stdout.reconfigure(encoding='utf-8')\n"
         f"import {library_name}\n"
         f"version = getattr({library_name}, '__version__', getattr({library_name}, 'version', 'unknown'))\n"
         f"print(f'Версия библиотеки {library_name}: {{version}}')\n"
