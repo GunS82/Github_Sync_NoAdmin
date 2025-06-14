@@ -1,10 +1,15 @@
 import tempfile
 import os
+import sys
 import subprocess
 import zipfile
+import io
+import runpy
+import contextlib
 from pathlib import Path
 from unittest import mock, TestCase
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import deploy_library as dl
 
 class DummyResponse:
@@ -71,3 +76,57 @@ class DeployLibraryTests(TestCase):
             (dir_to_remove / 'file.txt').write_text('data')
             dl.cleanup([dir_to_remove])
             self.assertFalse(dir_to_remove.exists())
+
+    def test_run_demonstration_dunder_version(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_path = Path(tmpdir)
+            package_dir = tmp_path / 'mylib'
+            package_dir.mkdir()
+            (package_dir / '__init__.py').write_text("__version__ = '1.0.0'")
+            sys.path.insert(0, str(tmp_path))
+            captured = {}
+
+            def fake_run(args, capture_output=False, text=False):
+                script_path = args[1]
+                stdout_io = io.StringIO()
+                with contextlib.redirect_stdout(stdout_io):
+                    runpy.run_path(script_path, run_name='__main__')
+                cp = subprocess.CompletedProcess(args, 0, stdout=stdout_io.getvalue(), stderr='')
+                captured['cp'] = cp
+                return cp
+
+            with mock.patch('subprocess.run', side_effect=fake_run):
+                dl.run_demonstration(tmp_path, 'mylib')
+
+            self.assertEqual(
+                captured['cp'].stdout.strip(),
+                'Версия библиотеки mylib: 1.0.0'
+            )
+            sys.path.pop(0)
+
+    def test_run_demonstration_version_attr(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_path = Path(tmpdir)
+            package_dir = tmp_path / 'otherlib'
+            package_dir.mkdir()
+            (package_dir / '__init__.py').write_text("version = '2.5.1'")
+            sys.path.insert(0, str(tmp_path))
+            captured = {}
+
+            def fake_run(args, capture_output=False, text=False):
+                script_path = args[1]
+                stdout_io = io.StringIO()
+                with contextlib.redirect_stdout(stdout_io):
+                    runpy.run_path(script_path, run_name='__main__')
+                cp = subprocess.CompletedProcess(args, 0, stdout=stdout_io.getvalue(), stderr='')
+                captured['cp'] = cp
+                return cp
+
+            with mock.patch('subprocess.run', side_effect=fake_run):
+                dl.run_demonstration(tmp_path, 'otherlib')
+
+            self.assertEqual(
+                captured['cp'].stdout.strip(),
+                'Версия библиотеки otherlib: 2.5.1'
+            )
+            sys.path.pop(0)

@@ -103,8 +103,8 @@ def run_demonstration(venv_path, library_name):
     demo_script = Path(venv_path) / "demo_script.py"
     demo_code = (
         f"import {library_name}\n"
-        f"version = getattr({library_name}, '__version__', 'unknown')\n"
-        f"print(f'Версия библиотеки {library_name}: {version}')\n"
+        f"version = getattr({library_name}, '__version__', getattr({library_name}, 'version', 'unknown'))\n"
+        f"print(f'Версия библиотеки {library_name}: {{version}}')\n"
     )
     try:
         demo_script.write_text(demo_code, encoding="utf-8")
